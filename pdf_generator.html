@@ -156,19 +156,41 @@ const VAX_GIRL=[
 ];
 
 // ════ DATABASE — same as pro tracker ════
-const DB_NAME='MamaShieldDB', DB_VER=2, STORE='babies';
+// Try both DB names since user may have free or pro version
+const DB_NAMES=['MamaShieldDB','MamaShieldProDB'];
+const DB_VER=2, STORE='babies';
 let DB=null;
 
 async function openDB(){
   if(DB) return DB;
+  // Try to open MamaShieldDB first (shared between free and pro)
   return new Promise((res,rej)=>{
-    const req=indexedDB.open(DB_NAME,DB_VER);
-    req.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE,{keyPath:'id'});};
+    const req=indexedDB.open('MamaShieldDB', DB_VER);
+    req.onupgradeneeded=e=>{
+      const db=e.target.result;
+      if(!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE,{keyPath:'id'});
+    };
     req.onsuccess=e=>{DB=e.target.result;res(DB);};
     req.onerror=e=>rej(e);
   });
 }
-async function dbGetAll(){const db=await openDB();return new Promise((r,j)=>{const q=db.transaction(STORE,'readonly').objectStore(STORE).getAll();q.onsuccess=e=>r(e.target.result||[]);q.onerror=e=>j(e);});}
+async function dbGetAll(){
+  const db=await openDB();
+  return new Promise((r,j)=>{
+    const tx=db.transaction(STORE,'readonly');
+    const req=tx.objectStore(STORE).getAll();
+    req.onsuccess=e=>r(e.target.result||[]);
+    req.onerror=e=>j(e);
+  });
+}
+async function dbGetById(id){
+  const db=await openDB();
+  return new Promise((r,j)=>{
+    const req=db.transaction(STORE,'readonly').objectStore(STORE).get(id);
+    req.onsuccess=e=>r(e.target.result);
+    req.onerror=e=>j(e);
+  });
+}
 
 // ════ HELPERS ════
 const MO=["January","February","March","April","May","June","July","August","September","October","November","December"];
@@ -182,44 +204,59 @@ let selectedBaby=null;
 
 // ════ LOAD BABIES ════
 async function init(){
-  const all=await dbGetAll();
-  const babies=all.filter(b=>b.id!=='__mum__'&&b.id!=='__consent__');
   const list=document.getElementById('babyList');
-
-  if(babies.length===0){
-    list.innerHTML=`<div class="empty-state">
-      <div class="empty-icon">👶</div>
-      <p style="font-size:14px;font-weight:600;color:var(--mid);margin-bottom:.5rem">No babies found</p>
-      <p style="font-size:13px">Please add a baby in your MamaShield Pro tracker first.</p>
-    </div>`;
-    return;
-  }
 
   // Check if a specific baby was passed via URL
   const urlParams = new URLSearchParams(window.location.search);
   const babyId = urlParams.get('babyId');
 
-  let autoSelected = null;
+  // If baby ID in URL, try to load that baby directly first
+  if(babyId){
+    try{
+      const baby = await dbGetById(babyId);
+      if(baby && baby.babyName){
+        // Found the baby — show it selected directly
+        const dob=new Date(baby.dob+'T00:00:00');
+        const icon=baby.gender==='girl'?'👧':baby.gender==='boy'?'👦':'👶';
+        const btn=document.createElement('button');
+        btn.className='baby-btn';
+        const displayName=[baby.babyName,baby.otherName,baby.surname].filter(Boolean).join(' ');
+        btn.innerHTML=`<span class="baby-icon">${icon}</span><div><div class="baby-name">${displayName}</div><div class="baby-dob">Born ${fmt(dob)}</div></div><span class="check-icon">✓</span>`;
+        btn.addEventListener('click',()=>selectBaby(baby,btn));
+        list.appendChild(btn);
+        // Auto select this baby
+        setTimeout(()=>{
+          selectBaby(baby,btn);
+          document.getElementById('previewCard').scrollIntoView({behavior:'smooth',block:'start'});
+        },200);
+        return;
+      }
+    }catch(e){console.log('Direct load failed, loading all babies',e);}
+  }
+
+  // No URL param or direct load failed — load all babies
+  const all=await dbGetAll();
+  const babies=all.filter(b=>b.id!=='__mum__'&&b.id!=='__consent__');
+
+  if(babies.length===0){
+    list.innerHTML=`<div class="empty-state">
+      <div class="empty-icon">👶</div>
+      <p style="font-size:14px;font-weight:600;color:var(--mid);margin-bottom:.5rem">No babies found</p>
+      <p style="font-size:13px">Please add a baby in your MamaShield Pro tracker first, then come back here.</p>
+    </div>`;
+    return;
+  }
 
   babies.forEach(baby=>{
     const dob=new Date(baby.dob+'T00:00:00');
     const icon=baby.gender==='girl'?'👧':baby.gender==='boy'?'👦':'👶';
     const btn=document.createElement('button');
     btn.className='baby-btn';
-    const displayName = [baby.babyName, baby.otherName, baby.surname].filter(Boolean).join(' ');
+    const displayName=[baby.babyName,baby.otherName,baby.surname].filter(Boolean).join(' ');
     btn.innerHTML=`<span class="baby-icon">${icon}</span><div><div class="baby-name">${displayName}</div><div class="baby-dob">Born ${fmt(dob)}</div></div><span class="check-icon">✓</span>`;
     btn.addEventListener('click',()=>selectBaby(baby,btn));
     list.appendChild(btn);
-    if(babyId && baby.id === babyId) autoSelected = {baby, btn};
   });
-
-  // Auto-select if baby ID was passed
-  if(autoSelected){
-    setTimeout(()=>{
-      selectBaby(autoSelected.baby, autoSelected.btn);
-      document.getElementById('previewCard').scrollIntoView({behavior:'smooth'});
-    }, 300);
-  }
 }
 
 function selectBaby(baby,btn){
