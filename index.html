@@ -192,9 +192,51 @@ input[readonly]:focus{border-color:var(--border);box-shadow:none;background:#F0F
 .disclaimer{background:#f9f9f7;border:1px solid var(--border);border-radius:12px;padding:.75rem 1rem;margin:0 1rem 1rem;font-size:11px;color:var(--soft);line-height:1.6;text-align:center;max-width:560px;margin-left:auto;margin-right:auto}
 .t-footer{text-align:center;font-size:11px;color:var(--soft);padding:.5rem 1rem 1rem;line-height:1.7}
 @media(max-width:440px){.field-row{grid-template-columns:1fr}.legend-inner{gap:8px}}
+#saveModal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.5);align-items:flex-end;justify-content:center}
+#saveModal.open{display:flex}
+.sheet{background:#fff;border-radius:20px 20px 0 0;padding:1.5rem;width:100%;max-width:520px;max-height:85vh;overflow-y:auto}
+.sheet h2{font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--teal);margin-bottom:.25rem}
+.sheet-sub{font-size:13px;color:var(--soft);margin-bottom:1.25rem;line-height:1.5}
+.os-tab{display:flex;gap:8px;margin-bottom:1.25rem}
+.os-btn{flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--teal-pale);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;cursor:pointer;text-align:center;transition:all .2s;color:var(--mid)}
+.os-btn.active{border-color:var(--teal);background:var(--teal);color:#fff}
+.os-steps{display:none}
+.os-steps.show{display:block}
+.os-step{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px;padding:10px 12px;background:var(--teal-pale);border-radius:10px}
+.os-num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--teal);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.os-text{font-size:13px;color:var(--mid);line-height:1.5}
+.close-sheet{width:100%;padding:12px;background:var(--teal);color:#fff;border:none;border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:.5rem}
+.save-prompt{background:var(--gold-light);border:1.5px solid var(--soon-border);border-radius:12px;padding:1rem;margin-bottom:1rem;display:flex;gap:10px;align-items:center}
+.save-prompt-text{flex:1;font-size:13px;color:var(--mid);line-height:1.5}
+.save-prompt-text strong{color:var(--dark)}
+.save-prompt-btn{background:var(--gold);color:#fff;border:none;border-radius:8px;padding:8px 14px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
 </style>
 </head>
 <body>
+<div id="saveModal" onclick="if(event.target===this)closeSaveModal()">
+  <div class="sheet">
+    <h2>📱 Save Vestule Care Pro to your phone</h2>
+    <p class="sheet-sub">Save the Pro dashboard to your home screen so you always land straight here — babies, calendar, PDF tracker, and the vaccine guide, all in one tap.</p>
+    <div class="os-tab">
+      <button class="os-btn active" id="osAndroid" onclick="switchOS('android')">🤖 Android</button>
+      <button class="os-btn" id="osIphone" onclick="switchOS('iphone')">🍎 iPhone</button>
+    </div>
+    <div class="os-steps show" id="stepsAndroid">
+      <div class="os-step"><div class="os-num">1</div><div class="os-text">Open in <strong>Google Chrome</strong></div></div>
+      <div class="os-step"><div class="os-num">2</div><div class="os-text">Tap <strong>three dots menu (⋮)</strong> top right</div></div>
+      <div class="os-step"><div class="os-num">3</div><div class="os-text">Tap <strong>"Add to Home screen"</strong> → <strong>"Add"</strong></div></div>
+      <div class="os-step"><div class="os-num">4</div><div class="os-text">✅ Vestule Care Pro icon appears on your home screen</div></div>
+    </div>
+    <div class="os-steps" id="stepsIphone">
+      <div class="os-step"><div class="os-num">1</div><div class="os-text">Open in <strong>Safari</strong></div></div>
+      <div class="os-step"><div class="os-num">2</div><div class="os-text">Tap <strong>Share button ⬆️</strong> at the bottom</div></div>
+      <div class="os-step"><div class="os-num">3</div><div class="os-text">Tap <strong>"Add to Home Screen"</strong> → <strong>"Add"</strong></div></div>
+      <div class="os-step"><div class="os-num">4</div><div class="os-text">✅ Vestule Care Pro icon appears on your home screen</div></div>
+    </div>
+    <button class="close-sheet" onclick="closeSaveModal()">Got it — close this</button>
+  </div>
+</div>
+
 
 <!-- ══ BABY SELECTOR MODAL ══ -->
 <div id="babySelectorModal" onclick="if(event.target===this)closeBabySelector()">
@@ -213,6 +255,12 @@ input[readonly]:focus{border-color:var(--border);box-shadow:none;background:#F0F
     <div class="badge">✨ FULL BUNDLE</div>
     <h1 id="homeTitle">My Babies</h1>
     <p>Your complete Vestule Care bundle — all in one place</p>
+  </div>
+
+  <div class="save-prompt">
+    <div style="font-size:1.4rem;flex-shrink:0">📱</div>
+    <div class="save-prompt-text"><strong>Save this to your home screen</strong> so you always land here — your full dashboard, with no extra taps.</div>
+    <button class="save-prompt-btn" onclick="showSaveModal()">How to save</button>
   </div>
 
   <div class="bundle-grid">
@@ -259,16 +307,16 @@ input[readonly]:focus{border-color:var(--border);box-shadow:none;background:#F0F
     <div class="field-row">
       <div class="field">
         <label>First name</label>
-        <input type="text" id="sName" placeholder="e.g. Adaeze" maxlength="30"/>
+        <input type="text" id="sName" placeholder="e.g. Ayomide" maxlength="30"/>
       </div>
       <div class="field">
         <label>Surname</label>
-        <input type="text" id="sSurname" placeholder="e.g. Okonkwo" maxlength="30"/>
+        <input type="text" id="sSurname" placeholder="e.g. Uzoma" maxlength="30"/>
       </div>
     </div>
     <div class="field">
       <label>Other name <span class="opt">(optional)</span></label>
-      <input type="text" id="sOtherName" placeholder="e.g. Chidinma" maxlength="30"/>
+      <input type="text" id="sOtherName" placeholder="e.g. Kyauta" maxlength="30"/>
     </div>
     <div class="field-row">
       <div class="field">
@@ -455,6 +503,14 @@ async function goHome(){
 
 function getBabies(all){return all.filter(b=>b.id!=='__mum__'&&b.id!=='__consent__'&&b.id!=='__unlocked__');}
 
+function showSaveModal(){document.getElementById('saveModal').classList.add('open');}
+function closeSaveModal(){document.getElementById('saveModal').classList.remove('open');}
+function switchOS(os){
+  document.getElementById('osAndroid').className='os-btn'+(os==='android'?' active':'');
+  document.getElementById('osIphone').className='os-btn'+(os==='iphone'?' active':'');
+  document.getElementById('stepsAndroid').className='os-steps'+(os==='android'?' show':'');
+  document.getElementById('stepsIphone').className='os-steps'+(os==='iphone'?' show':'');
+}
 async function renderHome(){
   const all=await dbGetAll();
   const babies=getBabies(all);
